@@ -1,93 +1,166 @@
 # Squad SDK Incident Response Example
 
-An incident assistance tool built on Squad SDK that auto-summarizes production alerts and drafts fix PRs from runbooks.
+An incident response orchestration tool built on the Squad SDK that auto-summarizes production incidents, routes diagnostics through service-specific runbooks, drafts fix PRs, and generates post-incident reviews. Designed for SRE teams who need structured, repeatable incident response workflows powered by AI agents.
 
 ## Features (P0 MVP)
 
-- **Issue-based intake**: Create a GitHub issue describing the incident; Squad picks it up
-- **Incident summarizer**: Agent reads issue + relevant code/logs, produces structured summary
-- **Runbook skill loading**: Load service-specific runbook skills with diagnostic steps
-- **Fix PR drafting**: Agent drafts a fix PR based on runbook + code analysis (human must approve)
-- **Incident timeline**: Append-only log of actions taken, decisions made
-- **Post-mortem generator**: Auto-generate post-incident review from timeline + decisions
+- **Issue-based incident intake**: Create a GitHub issue describing an incident; the system auto-parses severity and service metadata
+- **Incident summarization**: AI agent analyzes issue + relevant code context to produce structured incident summary (what, where, why)
+- **Runbook-driven diagnostics**: Load service-specific runbooks as reusable skills; route incidents to appropriate diagnostic agents
+- **Fix PR drafting**: Automatically draft fix PRs based on diagnostic results + code analysis (human approval required)
+- **Incident timeline**: Append-only audit log of all actions, decisions, and approvals
+- **Post-mortem generation**: Auto-generate incident post-mortem from timeline + decisions + lessons learned
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Incident Response Workflow                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [1] Incident Intake          [2] Summarization               │
+│  ─────────────────            ────────────────                │
+│  GitHub Issue                 • Parse code context             │
+│  │                            • Extract metadata               │
+│  ├─ Extract service name      • Generate summary               │
+│  ├─ Extract severity          └─→ IncidentSummary             │
+│  └─→ Incident object              │                           │
+│                                    │                           │
+│  [3] Diagnostic Routing        [4] Fix PR Drafting            │
+│  ─────────────────────        ────────────────────            │
+│  • Match service to runbook    • Generate code changes         │
+│  • Load skill per service      • Create file diffs             │
+│  • Run in parallel             • Draft PR metadata             │
+│  └─→ DiagnosticResults        └─→ DraftPR (awaits approval)   │
+│                                                                 │
+│  [5] Timeline & Decisions      [6] Post-Mortem               │
+│  ─────────────────────         ──────────────               │
+│  • Record all actions          • Aggregate timeline           │
+│  • Track approvals             • Generate markdown            │
+│  • Persist to .squad/          • Calculate duration           │
+│  └─→ IncidentTimeline         └─→ Post-mortem.md             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## SDK Modules Used
+
+| Module | Purpose | Status |
+|--------|---------|--------|
+| `platform.createPlatformAdapter()` | Create issues, PRs, labels on GitHub/ADO | ✅ Solid |
+| `skills.SkillRegistry` | Load service-specific runbooks as callable skills | ✅ Solid |
+| `builders.defineRouting()` | Route incidents by service name to specialist agents | ✅ Solid |
+| `state.DecisionsCollection` | Record decisions for audit trail + post-mortem | ✅ Solid |
+| `runtime.EventBus` | In-process event stream for agent coordination | ⚠️ In-process only |
 
 ## Project Structure
 
 ```
-src/                              # Implementation
-├── types.ts                       # Shared TypeScript types
-├── incident-intake.ts            # Parse incidents from issues
-├── incident-coordinator.ts       # Orchestrate incident response
-├── summarizer-agent.ts           # Generate incident summaries
-├── code-context.ts               # Fetch relevant code
-├── runbook-registry.ts           # Load and manage runbooks
-├── diagnostic-router.ts          # Route to diagnostics
-├── fix-pr-drafter.ts             # Draft PRs from diagnostics
-├── pr-changes.ts                 # Generate code changes
-├── incident-timeline.ts          # Record incident timeline
-├── decisions-logger.ts           # Log decisions
-├── post-mortem-generator.ts      # Generate post-mortems
-├── post-mortem-publisher.ts      # Publish post-mortems
-├── orchestrator.ts               # End-to-end orchestration
-└── index.ts                       # Main exports
-
-test/                             # Test files (TDD-driven)
-├── *.test.ts                     # Test stubs with describe/it blocks
-└── fixtures/                     # Sample data for tests
-
-PLAN.md                           # Detailed TDD implementation plan
+src/
+├── types.ts                       # Shared types (Incident, IncidentSummary, DraftPR, etc)
+├── index.ts                       # Main exports
+├── incident-intake.ts            # Phase 1: Parse incidents from GitHub issues
+├── incident-coordinator.ts       # Phase 1: Orchestrate per-incident workflows
+├── summarizer-agent.ts           # Phase 2: Generate incident summaries
+├── code-context.ts               # Phase 2: Fetch relevant code snippets
+├── runbook-registry.ts           # Phase 3: Load service-specific runbooks
+├── diagnostic-router.ts          # Phase 3: Route to diagnostic agents by service
+├── fix-pr-drafter.ts             # Phase 4: Draft PRs from diagnostics
+├── pr-changes.ts                 # Phase 4: Generate code file changes
+├── incident-timeline.ts          # Phase 5: Record append-only action log
+├── decisions-logger.ts           # Phase 5: Log key decisions with metadata
+├── post-mortem-generator.ts      # Phase 6: Generate post-incident reviews
+├── post-mortem-publisher.ts      # Phase 6: Publish post-mortems to GitHub
+├── orchestrator.ts               # Phase 7: End-to-end incident workflow
+├── skills/
+│   ├── api-runbook.md            # Example runbook for API service diagnostics
+│   ├── database-runbook.md       # Example runbook for database diagnostics
+│   └── config.ts                 # Runbook loader config
+└── test/                         # TDD test files (one per feature)
+    ├── *.test.ts
+    └── fixtures/
 ```
 
-## Getting Started
+## Installation & Setup
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+See **[QUICKSTART.md](./QUICKSTART.md)** for step-by-step setup and your first incident response walkthrough.
 
-2. Review the TDD plan:
-   ```bash
-   cat PLAN.md
-   ```
+### Quick Commands
 
-3. Run tests (currently all stubs):
-   ```bash
-   npm run test:watch
-   ```
+```bash
+npm install        # Install dependencies
+npm run build      # Compile TypeScript → dist/
+npm run test       # Run tests in watch mode
+npm run test:run   # Run tests once and exit
+```
 
-4. Build TypeScript:
-   ```bash
-   npm run build
-   ```
+## Example: Configure a Runbook Skill
 
-## Development Flow
+Runbooks are loaded as reusable skills. Here's an example API service runbook:
 
-This project follows **Test-Driven Development (TDD)**:
+**`skills/api-runbook.md`:**
+```markdown
+# API Service Runbook
 
-1. **Read PLAN.md** to understand the feature
-2. **Write the test** in `test/{feature}.test.ts`
-3. **Implement the code** in `src/{feature}.ts`
-4. **Run tests** to verify
+## Diagnostic Steps
+1. Check API error logs for the last 5 minutes
+2. Query metrics: request latency, error rate, CPU usage
+3. Inspect recent deployments
+4. Check upstream service health
+
+## Recommended Fixes
+- If latency spike: scale horizontally, check database queries
+- If error rate spike: check circuit breaker status, inspect logs
+- If deployment-related: rollback or fix code
+```
+
+**Load in coordinator:**
+```typescript
+const registry = new RunbookRegistry();
+registry.load('./skills/'); // Loads *.md files as skills
+
+const coordinator = new IncidentCoordinator(incident, registry);
+await coordinator.run(); // Routes to API runbook if service==="api"
+```
+
+## Development Flow (TDD)
+
+This project follows **Test-Driven Development** organized into 7 phases:
+
+1. **Read PLAN.md** → understand the feature requirements
+2. **Write the test** → `test/{feature}.test.ts` (given/when/then structure)
+3. **Implement the code** → `src/{feature}.ts`
+4. **Run tests** → verify all pass
 5. **Repeat** for next feature
 
-Features are organized into 7 phases with clear dependencies.
+Each phase builds on prior ones (Phase 2 uses Phase 1 outputs, etc.).
 
-## SDK Modules Used
+## Configuration
 
-| Module | Provides | Status |
-|--------|----------|--------|
-| `platform.createPlatformAdapter()` | Create issues, PRs, labels on GitHub/ADO | ✅ Solid |
-| `skills.SkillRegistry` | Load service-specific runbooks as skills | ✅ Solid |
-| `builders.defineRouting()` | Route by pattern/keyword to specialist agents | ✅ Solid |
-| `state.DecisionsCollection` | Record incident decisions for post-mortem | ✅ Solid |
-| `runtime.EventBus` | In-process event stream | ⚠️ In-process only |
+### Environment Variables
 
-## Dependencies
+```bash
+# GitHub platform adapter
+GITHUB_TOKEN=ghp_...
+GITHUB_OWNER=your-org
+GITHUB_REPO=your-repo
 
-- `@bradygaster/squad-sdk` - Core SDK
-- `@bradygaster/squad-cli` - CLI utilities
-- `typescript` - Type checking
-- `vitest` - Test runner
+# Optional: Slack notifications
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+### SDK Configuration
+
+```typescript
+import { createPlatformAdapter } from '@bradygaster/squad-sdk';
+
+const platform = createPlatformAdapter('github', {
+  owner: process.env.GITHUB_OWNER,
+  repo: process.env.GITHUB_REPO,
+});
+
+const orchestrator = new IncidentResponseOrchestrator(platform, registry);
+```
 
 ## License
 
