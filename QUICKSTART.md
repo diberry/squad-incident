@@ -1,164 +1,116 @@
-# QUICKSTART: Incident Response Workflow
+# QUICKSTART: Incident Response in 10 Minutes
 
-Get started with the Squad Incident Response reference implementation in 5 minutes.
-
-> **Note:** This project demonstrates incident triage and runbook orchestration patterns. "PR drafts" are template-based suggestions that require human review — not automated code fixes.
+Get started with the Squad SDK Incident Response example.
 
 ## Prerequisites
 
 - **Node.js** 18+ ([download](https://nodejs.org/))
-- **npm** 9+ (comes with Node.js)
-- **Git** (for cloning and running examples)
-- **GitHub account** (to create test issues and view PR drafts)
+- **npm** 9+ (included with Node.js)
+- **Git**
 
-## 1. Clone & Install
+## Setup
 
 ```bash
-cd ~/projects
-git clone <repo-url> project-squad-sdk-example-incident
-cd project-squad-sdk-example-incident
+# Clone and install
+git clone <repo-url> squad-incident-example
+cd squad-incident-example
 
 npm install
 npm run build
 ```
 
-**Expected output:**
-```
-> npm install
-npm WARN ... (dependency resolution warnings are OK)
-added 127 packages in 2.3s
-
-> npm run build
-tsc
-✓ TypeScript compiled successfully
-```
-
-## 2. Run Tests
+Verify the build succeeded:
 
 ```bash
 npm run test:run
+# Expected: All tests pass
 ```
 
-**Expected output:**
-```
-✓ test/incident-intake.test.ts (3 tests)
-✓ test/incident-coordinator.test.ts (2 tests)
-✓ test/summarizer-agent.test.ts (3 tests)
-...
-47 tests total | 0 failed | 0 skipped
-```
+## Step 1: Create an Incident JSON File
 
-## 3. Your First Incident Response
+Create `incident.json` in the project root:
 
-This example walks through a complete incident lifecycle: creation → summarization → diagnostics → triage suggestions → post-mortem.
-
-### Step 3.1: Create an Incident Issue
-
-On GitHub, create a new issue on your test repo with:
-
-**Title:**
-```
-Production: API latency spike detected
-```
-
-**Body:**
-```markdown
-## Alert Details
-- Service: api
-- Severity: high
-- Duration: 5 minutes
-- Error Rate: 0% (latency issue only)
-- Affected Endpoint: /api/orders/list
-
-## Context
-Started at 14:32 UTC. Latency went from 50ms to 500ms.
-Recent deployment: commit abc1234 deployed 10 minutes before incident.
-
-## Logs
-```
-RequestLatency{endpoint=/orders/list, p95=500ms, p99=1500ms}
-```
-
-**Labels:**
-- `service:api`
-- `severity:high`
-```
-
-**Result:** GitHub issue #123 created (note the issue number)
-
-### Step 3.2: Initialize Incident Coordinator
-
-Create a file `example-incident.ts`:
-
-```typescript
-import { IncidentCoordinator, parseIncidentFromIssue } from './src/index';
-import { createPlatformAdapter } from '@bradygaster/squad-sdk';
-
-const main = async () => {
-  // Configure platform (GitHub)
-  const platform = createPlatformAdapter('github', {
-    owner: 'your-org',
-    repo: 'your-repo',
-    token: process.env.GITHUB_TOKEN,
-  });
-
-  // Fetch the issue
-  const gitHubIssue = await platform.getIssue(123); // Your issue #
-
-  // Parse incident from issue
-  const incident = parseIncidentFromIssue(gitHubIssue);
-  console.log('📋 Incident parsed:', incident);
-  // Output:
-  // {
-  //   id: "123",
-  //   title: "Production: API latency spike detected",
-  //   service: "api",
-  //   severity: "high",
-  //   description: "Started at 14:32 UTC...",
-  //   issueUrl: "https://github.com/your-org/your-repo/issues/123"
-  // }
-
-  // Create coordinator
-  const coordinator = new IncidentCoordinator(incident, platform);
-  console.log('🚀 Incident coordinator initialized');
-};
-
-main().catch(console.error);
-```
-
-Run it:
-```bash
-GITHUB_TOKEN=ghp_... npx ts-node example-incident.ts
-```
-
-**Expected output:**
-```
-📋 Incident parsed: {
-  id: '123',
-  title: 'Production: API latency spike detected',
-  service: 'api',
-  severity: 'high',
-  ...
+```json
+{
+  "id": "incident-001",
+  "title": "Production: API latency spike detected",
+  "service": "api",
+  "severity": "high",
+  "description": "API endpoint /api/orders/list experiencing 500ms+ latency. Deployed 10 minutes before incident. Error rate at 0%, latency spike at 14:32 UTC.",
+  "createdAt": "2024-01-15T14:35:00Z",
+  "issueUrl": "https://github.com/example/repo/issues/123",
+  "labels": ["service:api", "severity:high"]
 }
-🚀 Incident coordinator initialized
 ```
 
-### Step 3.3: Generate Incident Summary
+## Step 2: Add a Runbook Skill
 
-```typescript
-// ... continuing from Step 3.2 ...
+Create `skills/api-runbook.md`:
 
-const coordinator = new IncidentCoordinator(incident, platform);
+```markdown
+# API Service Runbook
 
-// Generate summary
-const summary = await coordinator.summarize();
-console.log('📝 Incident summary:');
-console.log(JSON.stringify(summary, null, 2));
+## Diagnostic Checklist
+- [ ] Check error logs (last 5 minutes)
+- [ ] Query request latency metrics (p50, p95, p99)
+- [ ] Check recent deployments
+- [ ] Verify upstream dependencies
+- [ ] Check database connection pool
+
+## Common Issues
+
+| Symptom | Likely Cause | Fix |
+|---------|------------|-----|
+| Latency spike + recent deploy | Code regression | Rollback or fix query |
+| 500ms+ p99 | N+1 query problem | Batch queries or eager load |
+| Connection pool exhausted | Too many concurrent requests | Scale pool or add circuit breaker |
+
+## Escalation
+If not resolved in 15 minutes, page on-call database engineer.
+```
+
+## Step 3: Run the Orchestrator
+
+```bash
+npx ts-node -T src/orchestrator.ts incident.json
 ```
 
 **Expected output:**
+
 ```
-📝 Incident summary:
+✅ Incident intake complete
+  - ID: incident-001
+  - Service: api
+  - Severity: high
+
+📝 Generating summary...
+✅ Summary generated
+
+🔍 Running diagnostics...
+✅ Diagnostics: 3 findings, 2 recommendations
+
+📋 Drafting triage report...
+✅ Triage report ready (requires human review)
+
+📅 Recording timeline...
+✅ Timeline recorded
+
+📄 Generating post-mortem...
+✅ Post-mortem generated
+
+📁 Outputs written to:
+   - incident-001-summary.json
+   - incident-001-timeline.json
+   - incident-001-post-mortem.md
+```
+
+## Step 4: Review the Outputs
+
+Three files are generated:
+
+### 1. Summary (`incident-001-summary.json`)
+
+```json
 {
   "what": "API latency spike: response time increased from 50ms to 500ms+",
   "where": ["api", "orders-list-endpoint"],
@@ -171,169 +123,90 @@ console.log(JSON.stringify(summary, null, 2));
 }
 ```
 
-### Step 3.4: Run Diagnostics (Load Runbook)
+### 2. Timeline (`incident-001-timeline.json`)
 
-Create an API runbook at `skills/api-runbook.md`:
+```json
+[
+  {
+    "timestamp": "2024-01-15T14:35:00Z",
+    "action": "incident_created",
+    "details": { "service": "api", "severity": "high" }
+  },
+  {
+    "timestamp": "2024-01-15T14:35:02Z",
+    "action": "summary_generated",
+    "details": { "duration_ms": 2500 }
+  },
+  {
+    "timestamp": "2024-01-15T14:35:03Z",
+    "action": "diagnostics_complete",
+    "details": { "service": "api", "findings": 3, "recommendations": 2 }
+  },
+  {
+    "timestamp": "2024-01-15T14:35:05Z",
+    "action": "pr_drafted",
+    "details": { "branch": "fix/incident-001-api-latency" }
+  }
+]
+```
+
+### 3. Post-Mortem (`incident-001-post-mortem.md`)
 
 ```markdown
-# API Service Runbook
+# Post-Mortem: Production API Latency Spike
 
-## 1. Check Error Logs
-- Look for panics, exceptions, timeouts in last 5 minutes
-- Filter by endpoint: /api/orders/*
+**Incident ID:** incident-001  
+**Duration:** 3 minutes  
+**Affected Services:** api, database  
+**Severity:** high  
 
-## 2. Query Metrics
-- Request latency (p50, p95, p99)
-- Error rate
-- Requests per second (RPS)
-- Database connection pool utilization
+## Timeline
 
-## 3. Inspect Deployments
-- Check recent deployments (last 30 minutes)
-- Identify code changes to hot paths
-- Review database migration logs
+| Time | Action | Details |
+|------|--------|---------|
+| 14:32:00 | Latency spike detected | p95: 50ms → 500ms |
+| 14:35:00 | Incident reported | Issue created |
+| 14:35:02 | Analysis complete | N+1 query identified |
+| 14:35:05 | Triage report ready | Awaiting human review |
 
-## 4. Check Dependencies
-- Upstream services: payment gateway, inventory service
-- Database health and query performance
-- Cache hit rates (Redis)
+## Root Cause
 
-## Typical Causes & Fixes
-| Cause | Indicator | Fix |
-|-------|-----------|-----|
-| N+1 queries | DB response time +300% | Add batch query or eager load |
-| Inefficient query | Query time increased | Add index or optimize WHERE clause |
-| Depleted connection pool | connections_in_use = max | Scale database connections |
-| Slow downstream | p99 >> p95 | Check payment gateway SLA |
+Recent deployment introduced N+1 query loop in `/api/orders/list` handler.
+
+## Lessons Learned
+
+1. Add integration tests for batch queries
+2. Implement automated query performance monitoring
+3. Add connection pool alerts at 75% threshold
+
+## Recommended Actions
+
+1. Review and merge fix PR
+2. Add slow query detection to CI pipeline
+3. Schedule database performance workshop
 ```
 
-```typescript
-import { DiagnosticRouter } from './src/index';
+## What's Next?
 
-const router = new DiagnosticRouter(platform);
-router.loadRunbooks('./skills/');
+### Add More Runbooks
 
-const diagnostics = await router.route(incident);
-console.log('🔍 Diagnostics:', JSON.stringify(diagnostics, null, 2));
+Create `skills/database-runbook.md`, `skills/cache-runbook.md`, etc. The orchestrator automatically discovers and routes to them.
+
+### Integrate with GitHub
+
+```bash
+export GITHUB_TOKEN=ghp_...
+export GITHUB_OWNER=your-org
+export GITHUB_REPO=your-repo
 ```
 
-**Expected output:**
-```
-🔍 Diagnostics: {
-  "service": "api",
-  "status": "success",
-  "findings": [
-    "N+1 query detected in src/handlers/orders.ts lines 45-62",
-    "SELECT * loop should be replaced with batch query",
-    "Database connection pool at 85% utilization"
-  ],
-  "recommendations": [
-    "Replace loop with single batch query using IN clause",
-    "Add query cache to prevent repeated database hits",
-    "Consider pagination for large result sets"
-  ]
-}
-```
+Then modify `incident.json` to parse from a real GitHub issue instead of JSON.
 
-### Step 3.5: Generate Fix Suggestions (Triage Report)
+### Automate with GitHub Actions
 
-> **Note:** This generates template-based suggestions, not real code diffs. All suggestions require human review and manual implementation.
-
-```typescript
-import { FixPRDrafter } from './src/index';
-
-const drafter = new FixPRDrafter(platform);
-const draftPR = await drafter.draft(incident, summary, diagnostics);
-
-console.log('📋 Triage report (structured as PR template):');
-console.log('Title:', draftPR.title);
-console.log('Branch:', draftPR.branch_name);
-console.log('Suggestions:', draftPR.files.length, 'files');
-console.log('Requires human review:', draftPR.requires_approval);
-```
-
-**Expected output:**
-```
-📋 Triage report (structured as PR template):
-Title: fix(api): optimize orders endpoint query to fix latency
-Branch: fix/incident-123-api-latency
-Suggestions: 2 files (template-based, not real diffs)
-Requires human review: true
-
-⚠️ Manual verification required — suggested changes need human review
-```
-
-### Step 3.6: Record Timeline & Decisions
-
-```typescript
-import { IncidentTimeline, DecisionsLogger } from './src/index';
-
-const timeline = new IncidentTimeline(incident.id);
-timeline.record('incident_created', { detected_at: new Date() });
-timeline.record('summary_generated', { duration_ms: 2500 });
-timeline.record('diagnostics_complete', { service: 'api', findings: 3 });
-timeline.record('pr_drafted', { branch: draftPR.branch_name });
-
-const logger = new DecisionsLogger();
-logger.log('pr_draft_created', {
-  context: 'fix_latency_spike',
-  approver_required: true,
-  suggested_action: 'Review fix PR and approve for deployment',
-});
-
-console.log('📅 Timeline:', timeline.entries);
-```
-
-**Expected output:**
-```
-📅 Timeline: [
-  { timestamp: 2024-01-15T14:35:00Z, action: 'incident_created', details: {...} },
-  { timestamp: 2024-01-15T14:35:02Z, action: 'summary_generated', details: {...} },
-  { timestamp: 2024-01-15T14:35:03Z, action: 'diagnostics_complete', details: {...} },
-  { timestamp: 2024-01-15T14:35:05Z, action: 'pr_drafted', details: {...} }
-]
-```
-
-### Step 3.7: Generate Post-Mortem
-
-```typescript
-import { PostMortemGenerator, PostMortemPublisher } from './src/index';
-
-// Generate post-mortem
-const pmgen = new PostMortemGenerator();
-const postmortem = pmgen.generate(incident, timeline, [], 3);
-console.log('📄 Post-mortem summary:');
-console.log('Duration:', postmortem.duration_minutes, 'minutes');
-console.log('Actions taken:', timeline.entries.length);
-console.log('Lessons learned:', postmortem.lessons_learned);
-
-// Publish to GitHub issue
-const publisher = new PostMortemPublisher(platform);
-await publisher.publish(postmortem, incident.id);
-console.log('✅ Post-mortem published to issue #' + incident.id);
-```
-
-**Expected output:**
-```
-📄 Post-mortem summary:
-Duration: 3 minutes
-Actions taken: 4
-Lessons learned: [
-  "Add integration tests for batch queries",
-  "Implement automated query performance monitoring",
-  "Add connection pool alerts at 75% threshold"
-]
-✅ Post-mortem published to issue #123
-```
-
-## Common Next Steps
-
-### 1. Automate Incident Intake
-
-Create a GitHub Action that triggers on new issues with `incident:` prefix:
+Create `.github/workflows/incident-response.yml`:
 
 ```yaml
-# .github/workflows/incident-response.yml
 name: Incident Response
 on:
   issues:
@@ -346,54 +219,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-      - run: npm run build
-      - run: npx ts-node incident-response.ts ${{ github.event.issue.number }}
+      - run: npm install && npm run build
+      - run: npx ts-node -T src/orchestrator.ts issue-${{ github.event.issue.number }}.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 2. Add Custom Runbooks
-
-Create service-specific runbooks:
-
-```bash
-skills/
-├── api-runbook.md
-├── database-runbook.md
-├── cache-runbook.md
-└── payment-gateway-runbook.md
-```
-
-Each runbook is loaded as a callable skill by `RunbookRegistry`.
-
-### 3. Integrate with Slack
+### Use the Programmatic API
 
 ```typescript
-const publisher = new PostMortemPublisher(platform);
-await publisher.publishToSlack(postmortem, process.env.SLACK_WEBHOOK_URL);
-```
+import { SummarizerAgent, DiagnosticRouter, IncidentTimeline } from './src/index';
 
-### 4. Run in Watch Mode for Development
+const summarizer = new SummarizerAgent(platform);
+const summary = await summarizer.summarize(incident);
 
-```bash
-npm run test:watch
-# Or with TypeScript compilation:
-tsc --watch
+const router = new DiagnosticRouter(platform);
+router.loadRunbooks('./skills/');
+const diagnostics = await router.route(incident);
+
+const timeline = new IncidentTimeline(incident.id);
+timeline.record('incident_created', { detected_at: new Date() });
 ```
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| `npm install` fails | Check Node.js version: `node --version` should be 18+ |
-| `npm run build` fails | Check for TypeScript errors: `npx tsc --noEmit` |
-| Tests fail | Run `npm run test:watch` and check test output for assertions |
-| `GITHUB_TOKEN` not found | Export token: `export GITHUB_TOKEN=ghp_...` |
-| Platform adapter fails | Check repo owner/name in config matches actual GitHub repo |
+| Issue | Fix |
+|-------|-----|
+| `npm install` fails | Check Node.js version: `node --version` (need 18+) |
+| `npm run build` fails | Run `npx tsc --noEmit` to see TypeScript errors |
+| Orchestrator crashes | Ensure `incident.json` is valid JSON |
+| Tests fail | Run `npm run test` to see detailed error messages |
+| `GITHUB_TOKEN` error | Export it: `export GITHUB_TOKEN=ghp_...` |
 
 ## Learn More
 
-- **[README.md](./README.md)** — Project overview and architecture
-- **[PLAN.md](./PLAN.md)** — Detailed TDD implementation plan (7 phases)
-- **[src/types.ts](./src/types.ts)** — All shared types and interfaces
+- **[README.md](./README.md)** — Full architecture and extending guide
+- **[PLAN.md](./PLAN.md)** — TDD implementation plan
+- **[src/types.ts](./src/types.ts)** — All shared types
 - **[Squad SDK Docs](https://github.com/bradygaster/squad)** — Core SDK reference
