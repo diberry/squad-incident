@@ -1,0 +1,31 @@
+{
+  "name": "project-squad-sdk-example-incident",
+  "version": "0.1.0",
+  "description": "Incident response tool using Squad SDK for summarization and PR drafting",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch"
+  },
+  "dependencies": {
+    "@bradygaster/squad-sdk": "latest",
+    "@bradygaster/squad-cli": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "incident-response",
+    "squad-sdk",
+    "incident-management",
+    "summarization",
+    "pr-drafting"
+  ],
+  "author": "",
+  "license": "MIT"
+}

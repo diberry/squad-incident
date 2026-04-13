@@ -1,0 +1,10 @@
+{
+  "id": "inc-001",
+  "title": "Production: Database CPU 95%",
+  "service": "database",
+  "severity": "critical",
+  "description": "Database server CPU utilization spiked to 95%, causing query timeouts",
+  "createdAt": "2024-04-12T10:30:00Z",
+  "issueUrl": "https://github.com/example/repo/issues/42",
+  "labels": ["service:database", "severity:critical", "incident"]
+}
