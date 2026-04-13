@@ -22,25 +22,45 @@ describe('Summarizer Agent', () => {
 
   describe('generateSummary', () => {
     it('should generate incident summary', async () => {
-      // TODO: Test implementation
+      const summary = await agent.generateSummary(sampleIncident);
+      expect(summary).toBeDefined();
+      expect(summary.what).toContain('Database');
+      expect(summary.severity).toBe('critical');
+      expect(summary.likely_cause).toBeTruthy();
+      expect(summary.affected_services).toContain('database');
     });
 
     it('should cite code locations in summary', async () => {
-      // TODO: Test implementation
+      const incidentWithFile: Incident = {
+        ...sampleIncident,
+        description: 'Error in src/api/handler.ts causing CPU spike',
+      };
+      const summary = await agent.generateSummary(incidentWithFile);
+      expect(summary.code_references.length).toBeGreaterThanOrEqual(1);
+      expect(summary.code_references[0].file).toBe('src/api/handler.ts');
     });
 
     it('should include affected services', async () => {
-      // TODO: Test implementation
+      const summary = await agent.generateSummary(sampleIncident);
+      expect(summary.affected_services).toBeInstanceOf(Array);
+      expect(summary.affected_services.length).toBeGreaterThan(0);
+      expect(summary.affected_services).toContain('database');
     });
   });
 
   describe('detectSeverity', () => {
     it('should detect severity from incident metadata', () => {
-      // TODO: Test implementation
+      expect(agent.detectSeverity(sampleIncident)).toBe('critical');
     });
 
     it('should default to medium for unknown severity', () => {
-      // TODO: Test implementation
+      const unknownIncident: Incident = {
+        ...sampleIncident,
+        severity: 'medium',
+        labels: [],
+        title: 'Some generic issue',
+      };
+      expect(agent.detectSeverity(unknownIncident)).toBe('medium');
     });
   });
 });
