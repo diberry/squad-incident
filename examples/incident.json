@@ -1,0 +1,10 @@
+{
+  "id": "incident-001",
+  "title": "Production: API latency spike detected",
+  "service": "database",
+  "severity": "high",
+  "description": "API endpoint /api/orders/list experiencing 500ms+ latency. Deployed 10 minutes before incident. Error rate at 0%, latency spike at 14:32 UTC.",
+  "createdAt": "2024-01-15T14:35:00Z",
+  "issueUrl": "https://github.com/example/repo/issues/123",
+  "labels": ["service:database", "severity:high"]
+}

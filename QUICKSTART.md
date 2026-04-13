@@ -26,165 +26,48 @@ npm run test:run
 # Expected: All tests pass
 ```
 
-## Step 1: Create an Incident JSON File
+## Step 1: Explore the Sample Inputs
 
-Create `incident.json` in the project root:
+The project ships with example files you can use immediately:
 
-```json
-{
-  "id": "incident-001",
-  "title": "Production: API latency spike detected",
-  "service": "api",
-  "severity": "high",
-  "description": "API endpoint /api/orders/list experiencing 500ms+ latency. Deployed 10 minutes before incident. Error rate at 0%, latency spike at 14:32 UTC.",
-  "createdAt": "2024-01-15T14:35:00Z",
-  "issueUrl": "https://github.com/example/repo/issues/123",
-  "labels": ["service:api", "severity:high"]
-}
-```
+- `examples/incident.json` — a sample incident report
+- `examples/runbooks/database.md` — a sample service runbook
 
-## Step 2: Add a Runbook Skill
-
-Create `skills/api-runbook.md`:
-
-```markdown
-# API Service Runbook
-
-## Diagnostic Checklist
-- [ ] Check error logs (last 5 minutes)
-- [ ] Query request latency metrics (p50, p95, p99)
-- [ ] Check recent deployments
-- [ ] Verify upstream dependencies
-- [ ] Check database connection pool
-
-## Common Issues
-
-| Symptom | Likely Cause | Fix |
-|---------|------------|-----|
-| Latency spike + recent deploy | Code regression | Rollback or fix query |
-| 500ms+ p99 | N+1 query problem | Batch queries or eager load |
-| Connection pool exhausted | Too many concurrent requests | Scale pool or add circuit breaker |
-
-## Escalation
-If not resolved in 15 minutes, page on-call database engineer.
-```
-
-## Step 3: Run the Orchestrator
+## Step 2: Run the CLI
 
 ```bash
-npx ts-node -T src/orchestrator.ts incident.json
+# Full orchestration
+npx squad-incident run examples/incident.json
+
+# Just produce a summary
+npx squad-incident summarize examples/incident.json
+
+# Generate a post-mortem
+npx squad-incident postmortem examples/incident.json
 ```
 
-**Expected output:**
+**Expected output (run):**
 
 ```
 ✅ Incident intake complete
-  - ID: incident-001
-  - Service: api
-  - Severity: high
+   ID: incident-001
+   Service: database
+   Severity: high
 
-📝 Generating summary...
-✅ Summary generated
+📋 Status: awaiting_approval
+📝 Summary: Production: API latency spike detected: ...
+📅 Timeline entries: 7
+📄 Decisions: 2
+🔧 Draft PR: fix: resolve incident incident-001 — ...
 
-🔍 Running diagnostics...
-✅ Diagnostics: 3 findings, 2 recommendations
-
-📋 Drafting triage report...
-✅ Triage report ready (requires human review)
-
-📅 Recording timeline...
-✅ Timeline recorded
-
-📄 Generating post-mortem...
-✅ Post-mortem generated
-
-📁 Outputs written to:
-   - incident-001-summary.json
-   - incident-001-timeline.json
-   - incident-001-post-mortem.md
+Done.
 ```
 
-## Step 4: Review the Outputs
+## Step 3: Review the Outputs
 
-Three files are generated:
-
-### 1. Summary (`incident-001-summary.json`)
-
-```json
-{
-  "what": "API latency spike: response time increased from 50ms to 500ms+",
-  "where": ["api", "orders-list-endpoint"],
-  "severity": "high",
-  "likely_cause": "Recent deployment (commit abc1234) introduced N+1 query in /api/orders/list",
-  "affected_services": ["api", "database"],
-  "code_references": [
-    { "file": "src/handlers/orders.ts", "startLine": 45, "endLine": 62 }
-  ]
-}
-```
-
-### 2. Timeline (`incident-001-timeline.json`)
-
-```json
-[
-  {
-    "timestamp": "2024-01-15T14:35:00Z",
-    "action": "incident_created",
-    "details": { "service": "api", "severity": "high" }
-  },
-  {
-    "timestamp": "2024-01-15T14:35:02Z",
-    "action": "summary_generated",
-    "details": { "duration_ms": 2500 }
-  },
-  {
-    "timestamp": "2024-01-15T14:35:03Z",
-    "action": "diagnostics_complete",
-    "details": { "service": "api", "findings": 3, "recommendations": 2 }
-  },
-  {
-    "timestamp": "2024-01-15T14:35:05Z",
-    "action": "pr_drafted",
-    "details": { "branch": "fix/incident-001-api-latency" }
-  }
-]
-```
-
-### 3. Post-Mortem (`incident-001-post-mortem.md`)
-
-```markdown
-# Post-Mortem: Production API Latency Spike
-
-**Incident ID:** incident-001  
-**Duration:** 3 minutes  
-**Affected Services:** api, database  
-**Severity:** high  
-
-## Timeline
-
-| Time | Action | Details |
-|------|--------|---------|
-| 14:32:00 | Latency spike detected | p95: 50ms → 500ms |
-| 14:35:00 | Incident reported | Issue created |
-| 14:35:02 | Analysis complete | N+1 query identified |
-| 14:35:05 | Triage report ready | Awaiting human review |
-
-## Root Cause
-
-Recent deployment introduced N+1 query loop in `/api/orders/list` handler.
-
-## Lessons Learned
-
-1. Add integration tests for batch queries
-2. Implement automated query performance monitoring
-3. Add connection pool alerts at 75% threshold
-
-## Recommended Actions
-
-1. Review and merge fix PR
-2. Add slow query detection to CI pipeline
-3. Schedule database performance workshop
-```
+The `run` command saves a checkpoint to `.squad/checkpoints/`.
+The `summarize` command writes `<id>-summary.json` to the current directory.
+The `postmortem` command writes `<id>-post-mortem.md` to the current directory.
 
 ## What's Next?
 
@@ -220,7 +103,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
       - run: npm install && npm run build
-      - run: npx ts-node -T src/orchestrator.ts issue-${{ github.event.issue.number }}.json
+      - run: npx squad-incident run incident.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -228,17 +111,20 @@ jobs:
 ### Use the Programmatic API
 
 ```typescript
-import { SummarizerAgent, DiagnosticRouter, IncidentTimeline } from './src/index';
+import {
+  SummarizerAgent,
+  DiagnosticRouter,
+  IncidentTimeline,
+} from './src/index';
 
-const summarizer = new SummarizerAgent(platform);
-const summary = await summarizer.summarize(incident);
+const summarizer = new SummarizerAgent();
+const summary = await summarizer.generateSummary(incident);
 
-const router = new DiagnosticRouter(platform);
-router.loadRunbooks('./skills/');
-const diagnostics = await router.route(incident);
+const router = new DiagnosticRouter();
+const diagnostics = await router.routeToDiagnostics(incident);
 
-const timeline = new IncidentTimeline(incident.id);
-timeline.record('incident_created', { detected_at: new Date() });
+const timeline = new IncidentTimeline();
+timeline.recordAction(incident.id, 'incident_created', 'script');
 ```
 
 ## Troubleshooting

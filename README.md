@@ -59,39 +59,36 @@ Create service-specific runbooks in `skills/`:
 
 The system automatically discovers and loads all `.md` files from the `skills/` directory.
 
-### 3. Run the Incident Orchestrator
+### 3. Run the CLI
 
 ```bash
 npm run build
 
-# Execute the orchestrator
-npx ts-node -T orchestrator.ts incident-report.json
+# Full orchestration
+npx squad-incident run incident-report.json
+
+# Just produce a summary
+npx squad-incident summarize incident-report.json
+
+# Generate a post-mortem
+npx squad-incident postmortem incident-report.json
 ```
 
-**Expected output:**
+**Expected output (run):**
 
 ```
 ✅ Incident intake complete
-  - ID: 123
-  - Service: api
-  - Severity: high
+   ID: 123
+   Service: api
+   Severity: high
 
-📝 Generating summary...
-✅ Summary generated
+📋 Status: awaiting_approval
+📝 Summary: ...
+📅 Timeline entries: 7
+📄 Decisions: 2
+🔧 Draft PR: fix: resolve incident 123 — ...
 
-🔍 Running diagnostics against api-runbook...
-✅ Diagnostics complete
-  - Findings: 3
-  - Recommendations: 2
-
-📋 Drafting triage report...
-✅ Triage report ready (requires human review)
-
-📅 Recording timeline...
-✅ Timeline recorded
-
-📄 Generating post-mortem...
-✅ Post-mortem generated
+Done.
 ```
 
 ### 4. Read the Outputs
@@ -192,25 +189,24 @@ import {
 } from './src/index';
 
 // Summarize
-const summarizer = new SummarizerAgent(platform);
-const summary = await summarizer.summarize(incident);
+const summarizer = new SummarizerAgent();
+const summary = await summarizer.generateSummary(incident);
 
 // Diagnose
-const router = new DiagnosticRouter(platform);
-router.loadRunbooks('./skills/');
-const diagnostics = await router.route(incident);
+const router = new DiagnosticRouter();
+const diagnostics = await router.routeToDiagnostics(incident);
 
 // Draft fixes
-const drafter = new FixPRDrafter(platform);
-const draftPR = await drafter.draft(incident, summary, diagnostics);
+const drafter = new FixPRDrafter();
+const draftPR = await drafter.draftPR(incident, summary, diagnostics);
 
-// Record decisions
-const timeline = new IncidentTimeline(incident.id);
-timeline.record('incident_created', { detected_at: new Date() });
+// Record timeline
+const timeline = new IncidentTimeline();
+timeline.recordAction(incident.id, 'incident_created', 'script', { detected_at: new Date().toISOString() });
 
 // Generate post-mortem
 const pmgen = new PostMortemGenerator();
-const postmortem = pmgen.generate(incident, timeline, [], 3);
+const postmortem = await pmgen.generatePostMortem(incident.id, timeline.getTimeline(incident.id), []);
 ```
 
 ### Architecture Overview
@@ -242,6 +238,8 @@ const postmortem = pmgen.generate(incident, timeline, [], 3);
 
 ```
 src/
+├── cli/
+│   └── main.ts                    # CLI entry point (run, summarize, postmortem)
 ├── types.ts                       # Shared types (Incident, IncidentSummary, etc)
 ├── index.ts                       # Main exports
 ├── incident-intake.ts             # Parse incidents from GitHub issues
