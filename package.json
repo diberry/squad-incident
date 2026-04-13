@@ -1,7 +1,7 @@
 {
   "name": "project-squad-sdk-example-incident",
   "version": "0.1.0",
-  "description": "Incident response tool using Squad SDK for summarization and PR drafting",
+  "description": "Reference implementation: incident triage and runbook orchestration using Squad SDK",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,8 +23,8 @@
     "incident-response",
     "squad-sdk",
     "incident-management",
-    "summarization",
-    "pr-drafting"
+    "triage",
+    "runbook-orchestration"
   ],
   "author": "",
   "license": "MIT"

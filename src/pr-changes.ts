@@ -1,11 +1,18 @@
 import { FileChange } from './types';
 
 /**
- * Generates code changes for PR from fix descriptions
+ * Generates template-based change suggestions from diagnostic recommendations.
+ *
+ * These are NOT real code diffs — they are structured suggestions that describe
+ * what a human engineer should change, based on runbook diagnostics. The "after"
+ * field contains a comment-based description, not compilable replacement code.
+ *
+ * Manual verification required — all suggestions need human review before action.
  */
 export class PRChangeGenerator {
   /**
-   * Generate code changes from fix description
+   * Generate a template-based change suggestion from a fix description.
+   * Returns a structured suggestion, not a real code diff.
    */
   async generateChanges(fix_description: string, code_context: any): Promise<FileChange[]> {
     const filePath = code_context?.file ?? 'src/fix.ts';
@@ -16,13 +23,13 @@ export class PRChangeGenerator {
       path: filePath,
       language,
       before,
-      after: `${before}\n// Fix: ${fix_description}`,
-      explanation: fix_description,
+      after: `${before}\n// Suggested fix (manual verification required): ${fix_description}`,
+      explanation: `[Template suggestion] ${fix_description} — requires human review`,
     }];
   }
 
   /**
-   * Include comments explaining changes
+   * Annotate suggestions with reasoning context.
    */
   addExplanatoryComments(changes: FileChange[], reasoning: string): FileChange[] {
     return changes.map(change => ({
@@ -33,7 +40,7 @@ export class PRChangeGenerator {
   }
 
   /**
-   * Handle multi-file changes
+   * Generate template suggestions for multiple files.
    */
   async generateMultiFileChanges(fixes: any[]): Promise<FileChange[]> {
     const allChanges: FileChange[] = [];
@@ -48,16 +55,14 @@ export class PRChangeGenerator {
   }
 
   /**
-   * Validate generated code syntax
+   * Basic bracket/quote balance check on suggestion text.
    */
   validateSyntax(change: FileChange): boolean {
     const code = change.after;
-    // Basic validation: check for unmatched braces, parens, brackets
     const opens = (code.match(/[{(\[]/g) ?? []).length;
     const closes = (code.match(/[})\]]/g) ?? []).length;
     if (opens !== closes) return false;
 
-    // Check for unterminated strings
     const singleQuotes = (code.match(/'/g) ?? []).length;
     const doubleQuotes = (code.match(/"/g) ?? []).length;
     const backticks = (code.match(/`/g) ?? []).length;

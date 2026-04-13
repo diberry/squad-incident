@@ -1,27 +1,27 @@
 # Executive Summary: Squad Incident Response
 
 ## One-Liner
-An AI-powered incident response orchestration system that auto-summarizes production incidents, routes diagnostics through service-specific runbooks, and drafts fix PRs — enabling on-call engineers to resolve crises 3-5x faster with structured, repeatable workflows.
+A reference implementation demonstrating how Squad SDK patterns can structure incident response workflows — auto-summarizing incidents, routing diagnostics through runbooks, and generating template-based fix suggestions for human engineers to review and implement.
 
 ---
 
 ## The Problem
-When production incidents strike, on-call engineers waste 30–40% of incident duration triaging manually: piecing together context from Slack threads, hunting error logs, discovering cascading failures through trial-and-error. Multiple services are investigated sequentially instead of in parallel, and critical decisions are scattered across chat platforms—making post-incident analysis impossible and preventing learning loops. Teams building incident response tools today typically choose expensive commercial platforms (PagerDuty, OpsGenie) and remain locked into their AI black boxes.
+When production incidents strike, on-call engineers waste 30–40% of incident duration triaging manually: piecing together context from Slack threads, hunting error logs, discovering cascading failures through trial-and-error. Multiple services are investigated sequentially instead of in parallel, and critical decisions are scattered across chat platforms—making post-incident analysis difficult.
 
 ---
 
 ## The Opportunity
-Squad SDK enables building incident response **as code**—with structured agents, decision logging, and reusable runbooks. Unlike vendor platforms, Squad gives teams full control over agent specialization, approval workflows, and post-incident learning. This sample shows SRE teams and platform engineers how to orchestrate multi-agent incident response on their own infrastructure, using their own runbooks, with complete audit trails. It's a *capability unlock* for teams already managing microservices at scale.
+Squad SDK enables building incident response **as code**—with structured agents, decision logging, and reusable runbooks. This sample shows SRE teams and platform engineers how to orchestrate multi-agent incident triage on their own infrastructure, using their own runbooks, with complete audit trails. It demonstrates patterns that teams can adapt and extend for their specific needs.
 
 ---
 
 ## Who Benefits
 
-- **On-call engineers**: Summarization + PR drafting reduce MTTR by 40–50%; structured runbooks eliminate guesswork
+- **On-call engineers**: Structured summarization + runbook routing reduce context-gathering time; template suggestions provide a starting point for fixes
 - **SRE teams**: Reusable, versioned runbooks scale diagnostic expertise; parallel agent routing handles multi-service incidents
-- **Platform teams**: Reference implementation for incident response; extensible to cost tracking, escalation, rollback
-- **Engineering managers**: Audit trail + post-mortem generation enable blameless reviews and trend spotting
-- **Squad SDK adopters**: Learn multi-agent orchestration patterns; blueprint for other critical-path workflows (on-call burndown, change management, security incident response)
+- **Platform teams**: Reference implementation for incident response patterns; extensible to cost tracking, escalation, rollback
+- **Engineering managers**: Audit trail + post-mortem generation enable blameless reviews
+- **Squad SDK adopters**: Learn multi-agent orchestration patterns; blueprint for other workflows
 
 ---
 
@@ -30,7 +30,7 @@ Squad SDK enables building incident response **as code**—with structured agent
 - **Multi-agent coordination**: Route incidents to specialist agents by service; aggregate parallel results
 - **Runbook as code**: Define diagnostic workflows as reusable skills; load them dynamically
 - **Structured decision logging**: Use `DecisionsCollection` for audit trails and post-incident review
-- **Platform integrations**: Create issues, draft PRs, post updates—all programmatically via platform adapters
+- **Platform integrations**: Create issues, generate triage reports, post updates—all programmatically via platform adapters
 - **State & timeline management**: Build append-only incident timelines; link decisions to actions
 - **Error recovery**: Handle partial failures gracefully; checkpoint and resume workflows
 
@@ -38,7 +38,9 @@ Squad SDK enables building incident response **as code**—with structured agent
 
 ## Key Differentiator
 
-**Incident summarization + PR drafting** is not new. What's novel: doing it **within a multi-agent orchestration framework** where decisions are logged, runbooks are versioned, and the entire incident—from first alert to post-mortem—is reproducible as code. Teams can audit *why* agents proposed specific fixes, replay past incidents as training scenarios, and extend the system to include rollback, escalation, or multi-team coordination without rebuilding the foundation.
+**Incident summarization + runbook-driven triage** is not new. What's novel: doing it **within a multi-agent orchestration framework** where decisions are logged, runbooks are versioned, and the entire incident—from first alert to post-mortem—is reproducible as code. Teams can audit *why* agents proposed specific suggestions, replay past incidents as training scenarios, and extend the system to include rollback, escalation, or multi-team coordination without rebuilding the foundation.
+
+> **Honest scope:** This is a reference implementation. The "PR drafts" are template-based triage reports, not automated code fixes. Suggestions require human review and manual implementation.
 
 ---
 
@@ -48,7 +50,7 @@ Squad SDK enables building incident response **as code**—with structured agent
 |--------|-----|------|
 | **Incident intake** | Webhook from monitoring tools | GitHub issue or custom webhook |
 | **Diagnostic routing** | Opaque AI suggestions | Versioned runbooks; full control |
-| **Fix recommendations** | Black-box LLM model | Your prompts + code context + SD agents |
+| **Fix recommendations** | Black-box LLM model | Template-based suggestions from runbook diagnostics (human review required) |
 | **Post-mortem** | Generic templates | Custom analysis; decision-backed insights |
 | **Audit trail** | Limited; vendor-locked | Append-only; your infrastructure |
 | **Cost** | $50–200/month per team | Cost of SDK + infrastructure |
@@ -58,13 +60,15 @@ Squad SDK enables building incident response **as code**—with structured agent
 
 ---
 
-## ROI Signal
+## Potential Impact
 
-1. **MTTR reduction**: 40–50% faster incident resolution (from ~45 min to ~20 min) through parallel diagnostics + auto-drafted PRs. On a team with 2 incidents/month, that's ~50 hours/year recovered.
+> These are aspirational targets, not measured results. Actual impact depends on team adoption and customization.
 
-2. **Runbook effectiveness**: Diagnostic accuracy > 80% (measured by on-call engineer acceptance of AI suggestions). Prevents guessing; standardizes response across teams.
+1. **Triage time reduction**: Structured summarization + parallel diagnostics can reduce context-gathering time, letting engineers focus on implementing fixes rather than finding them.
 
-3. **Post-mortem velocity**: 90%+ of incidents auto-generate post-mortems, enabling weekly trend reviews instead of quarterly. Catch recurring incident types in weeks, not quarters.
+2. **Runbook effectiveness**: Standardized runbooks can improve diagnostic consistency across teams and reduce reliance on tribal knowledge.
+
+3. **Post-mortem velocity**: Auto-generated post-mortems lower the barrier to blameless reviews, enabling more frequent retrospectives.
 
 ---
 

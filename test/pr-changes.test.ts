@@ -30,6 +30,8 @@ describe('PR Change Generator', () => {
       expect(changes[0]).toHaveProperty('after');
       expect(changes[0].before).toBe('const timeout = 5000;');
       expect(changes[0].after).toContain('Fix timeout');
+      expect(changes[0].after).toContain('manual verification required');
+      expect(changes[0].explanation).toContain('Template suggestion');
     });
 
     it('should handle multiple file changes', async () => {

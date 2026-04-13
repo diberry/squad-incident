@@ -52,11 +52,12 @@ describe('Fix PR Drafter', () => {
       expect(pr.body).toContain('database');
     });
 
-    it('should include test changes in PR draft', async () => {
+    it('should include verification checklist instead of fake tests', async () => {
       const pr = await drafter.draftPR(sampleIncident, sampleSummary, sampleDiagnostics);
-      const testFile = pr.files.find(f => f.path.includes('test'));
-      expect(testFile).toBeDefined();
-      expect(testFile!.explanation).toContain('Regression test');
+      const checklist = pr.files.find(f => f.path.includes('verification-checklist'));
+      expect(checklist).toBeDefined();
+      expect(checklist!.explanation).toContain('Manual verification required');
+      expect(checklist!.after).toContain('Review suggested changes');
     });
 
     it('should require human approval', async () => {
@@ -83,12 +84,14 @@ describe('Fix PR Drafter', () => {
     });
   });
 
-  describe('addTestChanges', () => {
-    it('should include regression tests', async () => {
-      const testChange = await drafter.addTestChanges('Fix slow query');
-      expect(testChange).toBeDefined();
-      expect(testChange.path).toContain('test');
-      expect(testChange.after).toContain('regression');
+  describe('addVerificationNote', () => {
+    it('should return a verification checklist instead of fake tests', () => {
+      const note = drafter.addVerificationNote('Fix slow query');
+      expect(note).toBeDefined();
+      expect(note.path).toContain('verification-checklist');
+      expect(note.after).toContain('Manual Verification Checklist');
+      expect(note.after).toContain('Fix slow query');
+      expect(note.explanation).toContain('Manual verification required');
     });
   });
 });

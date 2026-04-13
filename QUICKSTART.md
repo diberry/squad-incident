@@ -1,6 +1,8 @@
 # QUICKSTART: Incident Response Workflow
 
-Get started with the Squad Incident Response system in 5 minutes.
+Get started with the Squad Incident Response reference implementation in 5 minutes.
+
+> **Note:** This project demonstrates incident triage and runbook orchestration patterns. "PR drafts" are template-based suggestions that require human review — not automated code fixes.
 
 ## Prerequisites
 
@@ -48,7 +50,7 @@ npm run test:run
 
 ## 3. Your First Incident Response
 
-This example walks through a complete incident lifecycle: creation → summarization → diagnostics → PR draft → post-mortem.
+This example walks through a complete incident lifecycle: creation → summarization → diagnostics → triage suggestions → post-mortem.
 
 ### Step 3.1: Create an Incident Issue
 
@@ -233,7 +235,9 @@ console.log('🔍 Diagnostics:', JSON.stringify(diagnostics, null, 2));
 }
 ```
 
-### Step 3.5: Draft Fix PR
+### Step 3.5: Generate Fix Suggestions (Triage Report)
+
+> **Note:** This generates template-based suggestions, not real code diffs. All suggestions require human review and manual implementation.
 
 ```typescript
 import { FixPRDrafter } from './src/index';
@@ -241,33 +245,22 @@ import { FixPRDrafter } from './src/index';
 const drafter = new FixPRDrafter(platform);
 const draftPR = await drafter.draft(incident, summary, diagnostics);
 
-console.log('📋 Fix PR draft:');
+console.log('📋 Triage report (structured as PR template):');
 console.log('Title:', draftPR.title);
 console.log('Branch:', draftPR.branch_name);
-console.log('Changes:', draftPR.files.length, 'files');
-console.log('Requires approval:', draftPR.requires_approval);
+console.log('Suggestions:', draftPR.files.length, 'files');
+console.log('Requires human review:', draftPR.requires_approval);
 ```
 
 **Expected output:**
 ```
-📋 Fix PR draft:
+📋 Triage report (structured as PR template):
 Title: fix(api): optimize orders endpoint query to fix latency
 Branch: fix/incident-123-api-latency
-Changes: 1 files
-Requires approval: true
+Suggestions: 2 files (template-based, not real diffs)
+Requires human review: true
 
-File: src/handlers/orders.ts
-Before:
-  const orders = [];
-  for (const id of orderIds) {
-    orders.push(await db.query('SELECT * FROM orders WHERE id = ?', [id]));
-  }
-
-After:
-  const orders = await db.query(
-    'SELECT * FROM orders WHERE id IN (?) LIMIT 1000',
-    [orderIds]
-  );
+⚠️ Manual verification required — suggested changes need human review
 ```
 
 ### Step 3.6: Record Timeline & Decisions

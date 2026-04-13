@@ -1,11 +1,16 @@
 import { Incident, IncidentSummary, DiagnosticResult, DraftPR, FileChange } from './types';
 
 /**
- * Drafts PR from incident summary and runbook diagnostics
+ * Drafts a triage report structured as a PR template from incident diagnostics.
+ *
+ * This does NOT generate real code diffs or compilable fixes. It produces
+ * template-based suggestions that describe what a human engineer should
+ * investigate and change. All output requires manual verification.
  */
 export class FixPRDrafter {
   /**
-   * Draft PR from incident and diagnostics
+   * Build a triage report structured as a draft PR.
+   * Suggestions are template-based — not real code diffs.
    */
   async draftPR(
     incident: Incident,
@@ -16,24 +21,22 @@ export class FixPRDrafter {
     const branchName = `fix/incident-${incident.id}`;
     const files: FileChange[] = [];
 
-    // Generate fix file changes from recommendations
+    // Generate template-based suggestions from recommendations
     for (const diag of diagnostics) {
       for (const rec of diag.recommendations) {
         files.push({
           path: `src/${incident.service}/fix.ts`,
           language: 'typescript',
           before: '// original code',
-          after: `// Fix: ${rec}`,
-          explanation: rec,
+          after: `// Suggested fix (manual verification required): ${rec}`,
+          explanation: `[Template suggestion] ${rec} — requires human review`,
         });
       }
     }
 
-    // Add test changes
-    const testChanges = await this.addTestChanges(summary.what);
-    if (testChanges) {
-      files.push(testChanges);
-    }
+    // Add a note about manual verification instead of a fake test
+    const verificationNote = this.addVerificationNote(summary.what);
+    files.push(verificationNote);
 
     return {
       title: `fix: resolve incident ${incident.id} — ${incident.title}`,
@@ -67,19 +70,22 @@ export class FixPRDrafter {
       sections.push(`## Diagnostics: ${diag.service}\n\n**Findings:**\n${diag.findings.map(f => `- ${f}`).join('\n')}\n\n**Recommendations:**\n${diag.recommendations.map(r => `- ${r}`).join('\n')}`);
     }
 
+    sections.push(`## ⚠️ Manual Verification Required\n\nAll suggested changes are template-based and require human review before implementation.`);
+
     return sections.join('\n\n');
   }
 
   /**
-   * Include test changes in draft
+   * Return a verification note instead of a fake test.
+   * Replaces the previous addTestChanges which generated expect(true).toBe(true).
    */
-  async addTestChanges(fix_description: string): Promise<FileChange> {
+  addVerificationNote(fix_description: string): FileChange {
     return {
-      path: 'test/regression.test.ts',
-      language: 'typescript',
+      path: 'test/verification-checklist.md',
+      language: 'markdown',
       before: '',
-      after: `// Regression test for: ${fix_description}\nimport { describe, it, expect } from 'vitest';\n\ndescribe('regression', () => {\n  it('should not regress', () => {\n    expect(true).toBe(true);\n  });\n});`,
-      explanation: `Regression test for incident: ${fix_description}`,
+      after: `# Manual Verification Checklist\n\n- [ ] Review suggested changes for: ${fix_description}\n- [ ] Write targeted regression tests for the actual fix\n- [ ] Verify fix resolves the incident in a staging environment\n- [ ] Get peer review before merging`,
+      explanation: `Manual verification required — suggested changes need human review`,
     };
   }
 }

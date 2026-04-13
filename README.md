@@ -1,13 +1,15 @@
 # Squad SDK Incident Response Example
 
-An incident response orchestration tool built on the Squad SDK that auto-summarizes production incidents, routes diagnostics through service-specific runbooks, drafts fix PRs, and generates post-incident reviews. Designed for SRE teams who need structured, repeatable incident response workflows powered by AI agents.
+A reference implementation demonstrating how Squad SDK patterns can structure incident response workflows. It shows how to auto-summarize production incidents, route diagnostics through service-specific runbooks, generate template-based fix suggestions, and produce post-incident reviews. Designed as a learning resource for SRE teams exploring multi-agent orchestration patterns.
+
+> **Note:** This project generates template-based suggestions, not automated code fixes. All "PR drafts" are structured triage reports that require human review and manual implementation.
 
 ## Features (P0 MVP)
 
 - **Issue-based incident intake**: Create a GitHub issue describing an incident; the system auto-parses severity and service metadata
 - **Incident summarization**: AI agent analyzes issue + relevant code context to produce structured incident summary (what, where, why)
 - **Runbook-driven diagnostics**: Load service-specific runbooks as reusable skills; route incidents to appropriate diagnostic agents
-- **Fix PR drafting**: Automatically draft fix PRs based on diagnostic results + code analysis (human approval required)
+- **Template-based fix suggestions**: Generate structured triage reports with recommended changes based on diagnostic results (human implementation required)
 - **Incident timeline**: Append-only audit log of all actions, decisions, and approvals
 - **Post-mortem generation**: Auto-generate incident post-mortem from timeline + decisions + lessons learned
 
@@ -26,12 +28,12 @@ An incident response orchestration tool built on the Squad SDK that auto-summari
 │  ├─ Extract severity          └─→ IncidentSummary             │
 │  └─→ Incident object              │                           │
 │                                    │                           │
-│  [3] Diagnostic Routing        [4] Fix PR Drafting            │
-│  ─────────────────────        ────────────────────            │
-│  • Match service to runbook    • Generate code changes         │
-│  • Load skill per service      • Create file diffs             │
-│  • Run in parallel             • Draft PR metadata             │
-│  └─→ DiagnosticResults        └─→ DraftPR (awaits approval)   │
+│  [3] Diagnostic Routing        [4] Fix Suggestions             │
+│  ─────────────────────        ───────────────────             │
+│  • Match service to runbook    • Template-based suggestions    │
+│  • Load skill per service      • Structured triage report      │
+│  • Run in parallel             • Human review required         │
+│  └─→ DiagnosticResults        └─→ DraftPR (needs human impl)  │
 │                                                                 │
 │  [5] Timeline & Decisions      [6] Post-Mortem               │
 │  ─────────────────────         ──────────────               │
@@ -65,8 +67,8 @@ src/
 ├── code-context.ts               # Phase 2: Fetch relevant code snippets
 ├── runbook-registry.ts           # Phase 3: Load service-specific runbooks
 ├── diagnostic-router.ts          # Phase 3: Route to diagnostic agents by service
-├── fix-pr-drafter.ts             # Phase 4: Draft PRs from diagnostics
-├── pr-changes.ts                 # Phase 4: Generate code file changes
+├── fix-pr-drafter.ts             # Phase 4: Generate triage reports as PR templates
+├── pr-changes.ts                 # Phase 4: Template-based change suggestions
 ├── incident-timeline.ts          # Phase 5: Record append-only action log
 ├── decisions-logger.ts           # Phase 5: Log key decisions with metadata
 ├── post-mortem-generator.ts      # Phase 6: Generate post-incident reviews
